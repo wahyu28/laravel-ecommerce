@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Product;
 use App\Category;
+use App\Jobs\ProductJob;
 
 use Illuminate\Support\Str;
 use File;
@@ -82,5 +83,29 @@ class ProductController extends Controller
     {
         $category = Category::orderBy('name', 'DESC')->get();
         return view('products.bulk', compact('category'));
+    }
+
+    public function massUpload(Request $request)
+    {
+        $this->validate($request, [
+            'category_id' => 'required|exists:categories,id',
+            'file' => 'required|mimes:xlsx'
+        ]);
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $filename = time() . '-product.' . $file->getClientOriginalExtension();
+            $file->storeAs('public/uploads', $filename);
+
+            ProductJob::dispatch($request->category_id, $filename);
+            return redirect()->back()->with(['success' => 'Upload Produk Dijadwalkan']);
+        }
+    }
+
+    public function edit($id)
+    {
+        $product = Product::find($id);
+        $category = Category::orderBy('name', 'DESC')->get();
+        return view('products.edit', compact('product', 'category'));
     }
 }
